@@ -10,6 +10,9 @@ const { registerBuzzerEvents } = require("./core/buzzer");
 const sessionRoutes = require("./routes/session");
 const teamsRoutes = require("./routes/teams");
 
+console.log("sessionRoutes type:", typeof sessionRoutes);
+console.log("teamsRoutes type:", typeof teamsRoutes);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -33,10 +36,7 @@ app.use("/host", (req, res, next) => {
   next();
 });
 
-// === Serve React Build ===
-app.use(express.static(path.join(state.exeDir, "game")));
-
-// === Routes ===
+// === Routes (MUST be before static) ===
 app.use("/api", sessionRoutes);
 app.use("/api", teamsRoutes);
 
@@ -72,7 +72,10 @@ setInterval(() => {
   }
 }, 2000);
 
-// === Catch-all ===
+// === Serve React Build (AFTER routes) ===
+app.use(express.static(path.join(state.exeDir, "game")));
+
+// === Catch-all (LAST) ===
 app.get("/{*path}", (req, res) => {
   res.sendFile(path.join(state.exeDir, "game", "index.html"));
 });

@@ -59,6 +59,11 @@ let buzzQueue = [];
 let winner = null;
 let buzzWindowTimeout = null;
 
+let screenTab = "trivia";
+let screenContent = { type: "blank", content: "", question: "", answer: "" };
+
+let scores = {};
+
 const players = new Map();
 const playerStats = new Map();
 const dismissedPlayers = new Set();
@@ -102,6 +107,12 @@ module.exports = {
   set winner(v) { winner = v; },
   get buzzWindowTimeout() { return buzzWindowTimeout; },
   set buzzWindowTimeout(v) { buzzWindowTimeout = v; },
+  get screenTab() { return screenTab; },
+  set screenTab(v) { screenTab = v; },
+  get screenContent() { return screenContent; },
+  set screenContent(v) { screenContent = v; },
+  get scores() { return scores; },
+  set scores(v) { scores = v; },
   players, playerStats, dismissedPlayers,
   initTeams,
   DEFAULT_TEAM_COLORS,

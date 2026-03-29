@@ -58,31 +58,6 @@ app.use(["/monitor", "/logs", "/shutdown", "/api"], (req, res, next) => {
   next();
 });
 
-// === Forward /api/session to game server on port 3000 ===
-app.get("/api/session", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/session");
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
-});
-
-app.post("/api/session", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
-});
-
 // === Monitor API routes ===
 app.get("/logs", (req, res) => res.json({
   logs,
@@ -98,7 +73,76 @@ app.post("/shutdown", (req, res) => {
   setTimeout(() => process.exit(0), 500);
 });
 
-// === Serve React Build ===
+// === Forward all /api/* to game server on port 3000 ===
+app.get("/api/session", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/session");
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+app.post("/api/session", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/session", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req.body),
+    });
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+app.post("/api/whitelist/add", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/whitelist/add", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req.body),
+    });
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+app.post("/api/whitelist/remove", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/whitelist/remove", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req.body),
+    });
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+app.get("/api/teams", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/teams");
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+app.post("/api/teams/mode", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/teams/mode", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req.body),
+    });
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+app.post("/api/teams/rename", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/teams/rename", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req.body),
+    });
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+app.post("/api/teams/assign", async (req, res) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/teams/assign", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req.body),
+    });
+    res.json(await response.json());
+  } catch { res.status(500).json({ error: "Failed to reach game server" }); }
+});
+
+// === Serve React Build (AFTER all API routes) ===
 app.use(express.static(path.join(exeDir, "game")));
 
 // === Catch-all for React Router (MUST be last) ===
@@ -110,85 +154,4 @@ app.get("/{*path}", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Monitor UI: http://localhost:${PORT}/monitor`);
   if (process.pkg) exec(`start http://localhost:${PORT}/monitor`);
-});
-
-// === Whitelisting ===
-app.post("/api/whitelist/add", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/whitelist/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
-});
-
-app.post("/api/whitelist/remove", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/whitelist/remove", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
-});
-
-app.get("/api/teams", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/teams");
-    const data = await response.json();
-    res.json(data);
-  } catch {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
-});
-
-app.post("/api/teams/mode", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/teams/mode", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
-});
-
-app.post("/api/teams/rename", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/teams/rename", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
-});
-
-app.post("/api/teams/assign", async (req, res) => {
-  try {
-    const response = await fetch("http://localhost:3000/api/teams/assign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch {
-    res.status(500).json({ error: "Failed to reach game server" });
-  }
 });

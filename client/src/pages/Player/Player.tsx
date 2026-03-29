@@ -39,16 +39,17 @@ export default function Player() {
     teams: Record<number, Team>;
     playerTeams: Record<string, number>;
   }>({ teamMode: 0, teams: {}, playerTeams: {} });
+  // const [screenTab, setScreenTab] = useState("trivia");
+  const [activePlayerTab, setActivePlayerTab] = useState("trivia");
+  const [screenContent, setScreenContent] = useState<{
+    type: "blank" | "question" | "image" | "answer";
+    content: string; question: string; answer: string;
+  }>({ type: "blank", content: "", question: "", answer: "" });
+  const [scores, setScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    socket.on("auth_success", () => {
-      setGameState("playing");
-      setAuthError("");
-    });
-
-    socket.on("auth_failed", ({ reason }: { reason: string }) => {
-      setAuthError(reason);
-    });
+    socket.on("auth_success", () => { setGameState("playing"); setAuthError(""); });
+    socket.on("auth_failed", ({ reason }: { reason: string }) => setAuthError(reason));
 
     socket.on("state", (state) => {
       if (state.buzzerState === "active" || state.buzzerState === "buzzed") {
@@ -61,12 +62,11 @@ export default function Player() {
       setBuzzQueue(state.queue || []);
       if (state.players) setConnectedPlayers((state.players as string[]).filter(p => p !== "__host__"));
       if (state.teamMode !== undefined) {
-        setTeamsState({
-          teamMode: state.teamMode,
-          teams: state.teams || {},
-          playerTeams: state.playerTeams || {},
-        });
+        setTeamsState({ teamMode: state.teamMode, teams: state.teams || {}, playerTeams: state.playerTeams || {} });
       }
+      if (state.screenTab) { setActivePlayerTab(state.screenTab); }
+      if (state.screenContent) setScreenContent(state.screenContent);
+      if (state.scores) setScores(state.scores);
     });
 
     socket.on("buzzer_state", (data) => {
@@ -77,57 +77,37 @@ export default function Player() {
         setBuzzerState("locked");
       }
       if (data.state === "locked" || data.state === "active") {
-        setBuzzedBy(null);
-        setMyPosition(null);
-        setHasBuzzed(false);
-        setOutOfQueue(false);
-        setProcessing(false);
+        setBuzzedBy(null); setMyPosition(null); setHasBuzzed(false);
+        setOutOfQueue(false); setProcessing(false);
       }
       setBuzzQueue(data.queue || []);
     });
 
-    socket.on("buzzer_processing", () => {
-      setProcessing(true);
-    });
+    socket.on("buzzer_processing", () => setProcessing(true));
 
     socket.on("buzzed", (data) => {
-      setProcessing(false);
-      setBuzzedBy(data.winner);
-      setBuzzQueue(data.queue || []);
+      setProcessing(false); setBuzzedBy(data.winner); setBuzzQueue(data.queue || []);
       const pos = data.queue?.findIndex((e: QueueEntry) => e.name === name);
-      if (pos !== undefined && pos >= 0) {
-        setMyPosition(pos + 1);
-        setHasBuzzed(true);
-      }
+      if (pos !== undefined && pos >= 0) { setMyPosition(pos + 1); setHasBuzzed(true); }
     });
 
     socket.on("queue_update", (data) => {
       setBuzzQueue(data.queue || []);
       const pos = data.queue?.findIndex((e: QueueEntry) => e.name === name);
-      if (pos !== undefined && pos >= 0) {
-        setMyPosition(pos + 1);
-      }
+      if (pos !== undefined && pos >= 0) setMyPosition(pos + 1);
     });
 
     socket.on("my_position", ({ position }: { position: number }) => {
-      setMyPosition(position);
-      setHasBuzzed(true);
+      setMyPosition(position); setHasBuzzed(true);
     });
 
     socket.on("reset", () => {
-      setBuzzedBy(null);
-      setMyPosition(null);
-      setHasBuzzed(false);
-      setOutOfQueue(false);
-      setProcessing(false);
-      setBuzzQueue([]);
+      setBuzzedBy(null); setMyPosition(null); setHasBuzzed(false);
+      setOutOfQueue(false); setProcessing(false); setBuzzQueue([]);
     });
 
     socket.on("dismissed_from_queue", () => {
-      setHasBuzzed(false);
-      setMyPosition(null);
-      setBuzzedBy(null);
-      setOutOfQueue(true);
+      setHasBuzzed(false); setMyPosition(null); setBuzzedBy(null); setOutOfQueue(true);
     });
 
     socket.on("players", (p: string[]) => {
@@ -135,12 +115,15 @@ export default function Player() {
     });
 
     socket.on("teams_update", (data) => {
-      setTeamsState({
-        teamMode: data.teamMode,
-        teams: data.teams || {},
-        playerTeams: data.playerTeams || {},
-      });
+      setTeamsState({ teamMode: data.teamMode, teams: data.teams || {}, playerTeams: data.playerTeams || {} });
     });
+
+    socket.on("screen_update", (data) => {
+      setActivePlayerTab(data.tab);
+      setScreenContent({ type: data.type, content: data.content, question: data.question, answer: data.answer });
+    });
+
+    socket.on("scores_update", (data) => setScores(data.scores));
 
     socket.on("answer_result", (data: { correct: boolean; message: string }) => {
       setAnswerResult(data);
@@ -162,48 +145,40 @@ export default function Player() {
     });
 
     socket.on("kicked", () => setGameState("kicked"));
-
-    socket.on("ping_check", (start: number, callback: Function) => {
-      callback(start);
-    });
+    socket.on("ping_check", (start: number, callback: Function) => callback(start));
 
     return () => {
-      socket.off("auth_success");
-      socket.off("auth_failed");
-      socket.off("state");
-      socket.off("buzzer_state");
-      socket.off("buzzer_processing");
-      socket.off("buzzed");
-      socket.off("queue_update");
-      socket.off("my_position");
-      socket.off("reset");
-      socket.off("dismissed_from_queue");
-      socket.off("players");
-      socket.off("teams_update");
-      socket.off("answer_result");
-      socket.off("answer_correct");
-      socket.off("answer_incorrect");
-      socket.off("kicked");
-      socket.off("ping_check");
+      socket.off("auth_success"); socket.off("auth_failed"); socket.off("state");
+      socket.off("buzzer_state"); socket.off("buzzer_processing"); socket.off("buzzed");
+      socket.off("queue_update"); socket.off("my_position"); socket.off("reset");
+      socket.off("dismissed_from_queue"); socket.off("players"); socket.off("teams_update");
+      socket.off("screen_update"); socket.off("scores_update"); socket.off("answer_result");
+      socket.off("answer_correct"); socket.off("answer_incorrect");
+      socket.off("kicked"); socket.off("ping_check");
     };
   }, [name]);
 
   function join() {
     if (!name.trim()) { setAuthError("Please enter a name."); return; }
     setAuthError("");
-    socket.connect(); // connect now
+    socket.connect();
     socket.emit("auth", { name: name.trim(), password });
   }
-  
+
   function buzz() {
-    if (buzzerState !== "active") return;
-    if (hasBuzzed || outOfQueue) return;
+    if (buzzerState !== "active" || hasBuzzed || outOfQueue) return;
     const reactionTime = activatedAt ? Date.now() - activatedAt : 0;
     socket.emit("buzz", { clientTime: Date.now(), reactionTime });
     setHasBuzzed(true);
   }
 
   const { teamMode, teams, playerTeams } = teamsState;
+  const teamGroups = teamMode > 0
+    ? Object.values(teams).map(team => ({
+        team, players: connectedPlayers.filter(p => playerTeams[p] === team.id),
+      }))
+    : [];
+  const unassigned = teamMode > 0 ? connectedPlayers.filter(p => !playerTeams[p]) : connectedPlayers;
 
   if (gameState === "kicked") {
     return (
@@ -219,23 +194,11 @@ export default function Player() {
       <div className={styles.loginContainer}>
         <div className={styles.loginCard}>
           <h1 className={styles.loginTitle}>Join Game</h1>
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && join()}
-            placeholder="Your name..."
-            maxLength={20}
-            autoFocus
-          />
-          <input
-            className={styles.input}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && join()}
-            placeholder="Session password..."
-          />
+          <input className={styles.input} value={name} onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && join()} placeholder="Your name..." maxLength={20} autoFocus />
+          <input className={styles.input} type="password" value={password}
+            onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && join()}
+            placeholder="Session password..." />
           {authError && <p className={styles.error}>{authError}</p>}
           <button className={styles.joinBtn} onClick={join}>Join</button>
         </div>
@@ -243,53 +206,71 @@ export default function Player() {
     );
   }
 
-  // Group players by team for leaderboard
-  const teamGroups = teamMode > 0
-    ? Object.values(teams).map(team => ({
-        team,
-        players: connectedPlayers.filter(p => playerTeams[p] === team.id),
-      }))
-    : [];
-  const unassigned = teamMode > 0
-    ? connectedPlayers.filter(p => !playerTeams[p])
-    : connectedPlayers;
-
-return (
+  return (
     <div className={styles.container}>
-
-      {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerName}>{name}</div>
         {teamMode > 0 && playerTeams[name] && teams[playerTeams[name]] && (
-          <div
-            className={styles.headerTeam}
-            style={{ background: `${teams[playerTeams[name]].color}20`, color: teams[playerTeams[name]].color }}
-          >
+          <div className={styles.headerTeam}
+            style={{ background: `${teams[playerTeams[name]].color}20`, color: teams[playerTeams[name]].color }}>
             {teams[playerTeams[name]].name}
           </div>
         )}
+        {/* My score in header */}
+        <div className={styles.headerScore}>
+          {teamMode > 0 && playerTeams[name]
+            ? scores[`team_${playerTeams[name]}`] || 0
+            : scores[name] || 0} pts
+        </div>
       </div>
 
       <div className={styles.content}>
-
-        {/* Left — Buzzer */}
         <div className={styles.buzzerCol}>
+
+          {/* Screen Display */}
+          <div className={styles.screenDisplay}>
+            <div className={styles.screenTabBar}>
+              <button
+                className={`${styles.screenTabBtn} ${activePlayerTab === "trivia" ? styles.screenTabActive : ""}`}
+                onClick={() => setActivePlayerTab("trivia")}
+              >
+                📝 Trivia
+              </button>
+            </div>
+            <div className={styles.screenContent}>
+              {activePlayerTab === "trivia" && (
+                <>
+                  {screenContent.type === "blank" && <div className={styles.screenBlank}>Waiting for host...</div>}
+                  {screenContent.type === "question" && <div className={styles.screenQuestion}>{screenContent.content}</div>}
+                  {screenContent.type === "image" && (
+                    <div className={styles.screenImageWrap}>
+                      {screenContent.question && <div className={styles.screenQuestionSmall}>{screenContent.question}</div>}
+                      <img src={screenContent.content} alt="question" className={styles.screenImage} />
+                    </div>
+                  )}
+                  {screenContent.type === "answer" && (
+                    <div className={styles.screenAnswerWrap}>
+                      {screenContent.question && <div className={styles.screenQuestionSmall}>{screenContent.question}</div>}
+                      <div className={styles.screenAnswer}>✅ {screenContent.content}</div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Buzz Button */}
           <button
             className={`${styles.buzzBtn} ${
               buzzerState === "locked" || outOfQueue ? styles.buzzLocked :
-              hasBuzzed ? styles.buzzWinner :
-              styles.buzzActive
+              hasBuzzed ? styles.buzzWinner : styles.buzzActive
             }`}
             onClick={buzz}
             disabled={buzzerState === "locked" || hasBuzzed || outOfQueue}
           >
-            {buzzerState === "locked" || outOfQueue
-              ? "LOCKED"
-              : processing && !hasBuzzed
-              ? "⏳"
-              : hasBuzzed
-              ? "YOU BUZZED!"
-              : "BUZZ"}
+            {buzzerState === "locked" || outOfQueue ? "LOCKED"
+              : processing && !hasBuzzed ? "⏳"
+              : hasBuzzed ? "YOU BUZZED!" : "BUZZ"}
           </button>
 
           {answerResult && (
@@ -297,67 +278,79 @@ return (
               {answerResult.message}
             </div>
           )}
-
           {incorrectNotif && !answerResult && (
             <div className={styles.notification}>{incorrectNotif}</div>
           )}
-
           {buzzedBy && !hasBuzzed && !answerResult && (
-            <div className={styles.notification}>
-              🔔 <strong>{buzzedBy}</strong> buzzed in first!
-            </div>
+            <div className={styles.notification}>🔔 <strong>{buzzedBy}</strong> buzzed in first!</div>
           )}
 
           <p className={styles.status}>
-            {outOfQueue
-              ? "You are out of the queue"
-              : buzzerState === "locked"
-              ? "Waiting for host..."
+            {outOfQueue ? "You are out of the queue"
+              : buzzerState === "locked" ? "Waiting for host..."
               : hasBuzzed
-              ? myPosition === 1
-                ? "🎉 You're first!"
-                : myPosition
-                ? `You're #${myPosition} in queue`
+              ? myPosition === 1 ? "🎉 You're first!"
+                : myPosition ? `You're #${myPosition} in queue`
                 : "You buzzed — waiting..."
-              : processing
-              ? "Someone buzzed..."
-              : "Press now!"}
+              : processing ? "Someone buzzed..." : "Press now!"}
           </p>
         </div>
 
-        {/* Right — Side Panel */}
+        {/* Side Panel */}
         <div className={styles.sidePanel}>
+
+          {/* Scoreboard */}
+          <div className={styles.card}>
+            <div className={styles.cardTitle}>
+              Scoreboard
+            </div>
+            <div className={styles.scoreboardList}>
+              {teamMode > 0 ? (
+                Object.values(teams)
+                  .sort((a, b) => (scores[`team_${b.id}`] || 0) - (scores[`team_${a.id}`] || 0))
+                  .map((team, i) => (
+                    <div key={team.id} className={styles.scoreRow}>
+                      <div className={styles.scoreRank}>#{i + 1}</div>
+                      <div className={styles.scoreName} style={{ color: team.color }}>{team.name}</div>
+                      <div className={styles.scoreValue}>{scores[`team_${team.id}`] || 0}</div>
+                    </div>
+                  ))
+              ) : (
+                [...connectedPlayers]
+                  .sort((a, b) => (scores[b] || 0) - (scores[a] || 0))
+                  .map((p, i) => (
+                    <div key={p} className={`${styles.scoreRow} ${p === name ? styles.scoreRowMe : ""}`}>
+                      <div className={styles.scoreRank}>#{i + 1}</div>
+                      <div className={`${styles.scoreName} ${p === name ? styles.scoreNameMe : ""}`}>{p}</div>
+                      <div className={styles.scoreValue}>{scores[p] || 0}</div>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
 
           {/* Queue */}
           <div className={styles.card}>
             <div className={styles.cardTitle}>
-              Buzz Queue
-              <span className={styles.cardCount}>{buzzQueue.length}</span>
+              Buzz Queue <span className={styles.cardCount}>{buzzQueue.length}</span>
             </div>
             {buzzQueue.length === 0 ? (
               <div className={styles.emptyState}>No buzzes yet</div>
             ) : (
               <div className={styles.queueList}>
                 {buzzQueue.map((entry, i) => (
-                  <div
-                    key={entry.name}
+                  <div key={entry.name}
                     className={`${styles.queueItem} ${entry.name === name ? styles.queueItemMe : ""} ${i === 0 ? styles.queueItemFirst : ""}`}
-                    style={i === 0 && entry.teamColor ? { borderLeft: `3px solid ${entry.teamColor}` } : {}}
-                  >
+                    style={i === 0 && entry.teamColor ? { borderLeft: `3px solid ${entry.teamColor}` } : {}}>
                     <div className={styles.queuePos}>#{i + 1}</div>
                     <div className={styles.queueAvatar} style={entry.teamColor ? { background: entry.teamColor } : {}}>
                       {entry.name[0].toUpperCase()}
                     </div>
                     <div className={styles.queueInfo}>
                       <div className={styles.queueName}>
-                        {entry.name}
-                        {entry.name === name && <span className={styles.youTag}> (you)</span>}
+                        {entry.name}{entry.name === name && <span className={styles.youTag}> (you)</span>}
                       </div>
-                      {entry.teamName && (
-                        <div className={styles.queueTeam} style={{ color: entry.teamColor || undefined }}>
-                          {entry.teamName}
-                        </div>
-                      )}
+                      {entry.teamName && <div className={styles.queueTeam} style={{ color: entry.teamColor || undefined }}>{entry.teamName}</div>}
                     </div>
                     <div className={styles.queueTime}>{entry.reactionTime}ms</div>
                   </div>
@@ -369,8 +362,7 @@ return (
           {/* Players */}
           <div className={styles.card}>
             <div className={styles.cardTitle}>
-              Players
-              <span className={styles.cardCount}>{connectedPlayers.length}</span>
+              Players <span className={styles.cardCount}>{connectedPlayers.length}</span>
             </div>
             {teamMode === 0 ? (
               <div className={styles.playerList}>
@@ -378,8 +370,7 @@ return (
                   <div key={p} className={`${styles.playerRow} ${p === name ? styles.playerRowMe : ""}`}>
                     <div className={styles.playerAvatar}>{p[0].toUpperCase()}</div>
                     <div className={styles.playerRowName}>
-                      {p}
-                      {p === name && <span className={styles.youTag}> (you)</span>}
+                      {p}{p === name && <span className={styles.youTag}> (you)</span>}
                     </div>
                     <div className={styles.onlineDot} />
                   </div>
@@ -399,8 +390,7 @@ return (
                           {p[0].toUpperCase()}
                         </div>
                         <div className={styles.playerRowName}>
-                          {p}
-                          {p === name && <span className={styles.youTag}> (you)</span>}
+                          {p}{p === name && <span className={styles.youTag}> (you)</span>}
                         </div>
                         <div className={styles.onlineDot} />
                       </div>
@@ -417,8 +407,7 @@ return (
                       <div key={p} className={`${styles.playerRow} ${p === name ? styles.playerRowMe : ""}`}>
                         <div className={styles.playerAvatar}>{p[0].toUpperCase()}</div>
                         <div className={styles.playerRowName}>
-                          {p}
-                          {p === name && <span className={styles.youTag}> (you)</span>}
+                          {p}{p === name && <span className={styles.youTag}> (you)</span>}
                         </div>
                         <div className={styles.onlineDot} />
                       </div>

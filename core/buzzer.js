@@ -31,6 +31,7 @@ function emitToPlayer(io, name, event, data) {
 }
 
 function registerBuzzerEvents(socket, io) {
+
   socket.on("activate", () => {
     if (!socket.data.authed || socket.data.name !== "__host__") return;
     if (state.buzzWindowTimeout) { clearTimeout(state.buzzWindowTimeout); state.buzzWindowTimeout = null; }
@@ -169,6 +170,60 @@ function registerBuzzerEvents(socket, io) {
       io.emit("queue_update", { queue: state.buzzQueue });
       socket.emit("my_position", { position: state.buzzQueue.length });
     }
+  });
+
+  // === Screen Events ===
+  socket.on("screen_push", ({ tab, type, content, question, answer }) => {
+    if (!socket.data.authed || socket.data.name !== "__host__") return;
+    state.screenTab = tab;
+    state.screenContent = { type, content: content || "", question: question || "", answer: answer || "" };
+    io.emit("screen_update", { tab: state.screenTab, ...state.screenContent });
+  });
+
+  socket.on("screen_clear", () => {
+    if (!socket.data.authed || socket.data.name !== "__host__") return;
+    state.screenContent = { type: "blank", content: "", question: "", answer: "" };
+    io.emit("screen_update", { tab: state.screenTab, type: "blank", content: "", question: "", answer: "" });
+  });
+
+  socket.on("screen_tab", (tab) => {
+    if (!socket.data.authed || socket.data.name !== "__host__") return;
+    state.screenTab = tab;
+    io.emit("screen_update", { tab: state.screenTab, ...state.screenContent });
+  });
+
+  // === Scoring Events ===
+  socket.on("award_points", ({ points }) => {
+    if (!socket.data.authed || socket.data.name !== "__host__") return;
+    if (state.buzzQueue.length === 0) return;
+
+    const answerer = state.buzzQueue[0].name;
+
+    if (state.teamMode > 0) {
+      const teamId = state.playerTeams[answerer];
+      if (teamId !== undefined) {
+        const key = `team_${teamId}`;
+        if (state.scores[key] === undefined) state.scores[key] = 0;
+        state.scores[key] += points;
+      }
+    } else {
+      if (state.scores[answerer] === undefined) state.scores[answerer] = 0;
+      state.scores[answerer] += points;
+    }
+
+    io.emit("scores_update", { scores: state.scores });
+  });
+
+  socket.on("set_score", ({ key, value }) => {
+    if (!socket.data.authed || socket.data.name !== "__host__") return;
+    state.scores[key] = value;
+    io.emit("scores_update", { scores: state.scores });
+  });
+
+  socket.on("reset_scores", () => {
+    if (!socket.data.authed || socket.data.name !== "__host__") return;
+    state.scores = {};
+    io.emit("scores_update", { scores: state.scores });
   });
 }
 

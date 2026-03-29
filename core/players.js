@@ -14,6 +14,9 @@ function registerPlayerEvents(socket, io) {
         teamMode: state.teamMode,
         teams: state.teams,
         playerTeams: state.playerTeams,
+        screenTab: state.screenTab,
+        screenContent: state.screenContent,
+        scores: state.scores,
       });
       console.log("Host connected");
       return;
@@ -42,6 +45,11 @@ function registerPlayerEvents(socket, io) {
       }
     }
 
+    // Initialize score
+    if (state.scores[name.trim()] === undefined) {
+      state.scores[name.trim()] = 0;
+    }
+
     const playerBuzzerState = state.dismissedPlayers.has(name.trim()) ? "locked" : state.buzzerState;
     socket.emit("auth_success");
     socket.emit("state", {
@@ -51,7 +59,11 @@ function registerPlayerEvents(socket, io) {
       teamMode: state.teamMode,
       teams: state.teams,
       playerTeams: state.playerTeams,
+      screenTab: state.screenTab,
+      screenContent: state.screenContent,
+      scores: state.scores,
     });
+
     if (state.dismissedPlayers.has(name.trim())) {
       socket.emit("dismissed_from_queue", {});
     }
@@ -62,6 +74,7 @@ function registerPlayerEvents(socket, io) {
       teams: state.teams,
       playerTeams: state.playerTeams,
     });
+    io.emit("scores_update", { scores: state.scores });
     console.log(`Player authenticated: ${name.trim()}`);
   });
 
