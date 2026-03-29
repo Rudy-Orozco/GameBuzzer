@@ -1,0 +1,445 @@
+.root {
+  min-height: 100vh;
+  height: 100vh;
+  background: #080d16;
+  color: #e2e8f0;
+  font-family: "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #0d1424;
+  border-bottom: 1px solid #1e293b;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: white;
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.headerSub {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* Status dots */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.dotGreen { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.dotYellow { background: #eab308; box-shadow: 0 0 6px #eab308; }
+.dotRed { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+/* Dashboard grid */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 16px;
+  padding: 20px 24px;
+  flex: 1;
+  overflow-y: auto;
+  align-content: start;
+}
+
+/* Cards */
+.card {
+  background: #0d1424;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.urlCard {
+  grid-column: 1 / -1;
+}
+
+.logsCard {
+  grid-column: 1 / -1;
+  min-height: 280px;
+  max-height: 380px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cardIcon { font-size: 16px; }
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.cardBadge {
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* URL card specific */
+.urlValue {
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #6366f1;
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.urlActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.playerLink {
+  font-size: 12px;
+  color: #475569;
+}
+
+.playerLink code {
+  color: #6366f1;
+}
+
+/* Status pill */
+.statusPill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* Buttons */
+.btn {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn:hover { opacity: 0.85; }
+.btn:active { transform: scale(0.97); }
+
+.btnPrimary { background: #6366f1; }
+.btnPurple { background: #7c3aed; }
+.btnGreen { background: #059669; }
+.btnDanger { background: #dc2626; }
+.btnFull { width: 100%; margin-top: 4px; }
+
+.shutdownBtn {
+  padding: 8px 16px;
+  background: #dc2626;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.shutdownBtn:hover { opacity: 0.85; }
+
+/* Inputs */
+.inputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  padding: 9px 14px;
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input:focus { border-color: #6366f1; }
+
+.errorText {
+  color: #ef4444;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Whitelist */
+.whitelistList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.whitelistItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.whitelistName {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+.removeBtn {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.removeBtn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Logs */
+.logs {
+  flex: 1;
+  background: #080d16;
+  border-radius: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  border: 1px solid #1e293b;
+}
+
+.logLine {
+  margin-bottom: 2px;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.logSuccess { color: #22c55e; }
+.logError { color: #ef4444; }
+.logTunnel { color: #94a3b8; }
+
+.teamModeRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.btnGhost {
+  background: #080d16;
+  border: 1px solid #1e293b;
+  color: #64748b;
+}
+.btnGhost:hover { border-color: #6366f1; color: #6366f1; }
+
+.teamList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.teamRow {
+  background: #080d16;
+  border-radius: 8px;
+  padding: 10px 12px;
+  padding-left: 14px;
+}
+
+.teamNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.teamName {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.teamCount {
+  font-size: 12px;
+  color: #475569;
+}
+
+.editBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.editBtn:hover { background: #1e293b; }
+
+.assignSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid #1e293b;
+}
+
+.assignTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.assignRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.assignAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.assignName {
+  flex: 1;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.teamSelect {
+  padding: 6px 10px;
+  background: #0d1424;
+  border: 1px solid #1e293b;
+  border-radius: 7px;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+.teamSelect:focus { border-color: #6366f1; }
+
+.assignNameCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.assignStatus {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.assignOnline { color: #22c55e; }
+.assignOffline { color: #475569; }
