@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node monitor.js",
     "build": "cd client && npm run build",
-    "package": "cd client && npm run build && cd .. && pkg monitor.js --targets node18-win-x64 --output GameController.exe"
+    "package": "cd client && npm run build && cd .. && pkg monitor.js --targets node18-win-x64 --output GameController.exe",
+    "dist": "npm run package && echo Done! Zip GameController.exe, cloudflared.exe, and the game/ folder"
   },
   "dependencies": {
     "cors": "^2.8.6",
