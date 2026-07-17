@@ -118,7 +118,7 @@ function registerBuzzerEvents(socket, io) {
 
   socket.on("buzz", ({ clientTime, reactionTime }) => {
     if (!socket.data.authed) return;
-    if (socket.data.name === "__host__") return;
+    if (socket.data.name === "__host__" || socket.data.name === "__audience__") return;
     if (state.buzzerState === "locked") return;
     if (state.dismissedPlayers.has(socket.data.name)) return;
     if (state.buzzQueue.some(e => e.name === socket.data.name)) return;

@@ -27,6 +27,7 @@ export default function Monitor() {
   }>({ teamMode: 0, teams: {}, playerTeams: {}, players: [] });
   const [editingTeam, setEditingTeam] = useState<number | null>(null);
   const [teamNameInput, setTeamNameInput] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     const local =
@@ -171,22 +172,14 @@ export default function Monitor() {
     setTeamsState(prev => ({ ...prev, teams: data.teams, playerTeams: data.playerTeams }));
   }
 
-  function copyUrl() {
-    if (!publicUrl) return;
-    navigator.clipboard.writeText(`${publicUrl}/player`);
-    alert("Player URL copied!");
+  function copyLink(url: string, key: string) {
+    navigator.clipboard.writeText(url);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 1500);
   }
 
-  function openPage(page: "host" | "player") {
-    if (page === "host") {
-      window.open("http://localhost:3000/host", "_blank");
-    } else {
-      if (!publicUrl?.startsWith("http")) {
-        alert("Tunnel not ready yet!");
-        return;
-      }
-      window.open(`${publicUrl}/player`, "_blank");
-    }
+  function openLink(url: string) {
+    window.open(url, "_blank");
   }
 
   async function shutdown() {
@@ -237,24 +230,58 @@ export default function Monitor() {
         <div className={`${styles.card} ${styles.urlCard}`}>
           <div className={styles.cardHeader}>
             <span className={styles.cardIcon}>🌐</span>
-            <span className={styles.cardTitle}>Tunnel URL</span>
+            <span className={styles.cardTitle}>Share Links</span>
           </div>
           <div className={styles.urlValue}>
             {publicUrl || "Waiting for tunnel..."}
           </div>
-          <div className={styles.urlActions}>
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={copyUrl}>
-              Copy Player URL
-            </button>
-            <button className={`${styles.btn} ${styles.btnPurple}`} onClick={() => openPage("host")}>
-              🎙️ Host Panel
-            </button>
-            <button className={`${styles.btn} ${styles.btnGreen}`} onClick={() => openPage("player")}>
-              🎮 Player View
-            </button>
-          </div>
-          <div className={styles.playerLink}>
-            Player link: <code>{publicUrl ? `${publicUrl}/player` : "—"}</code>
+
+          <div className={styles.linkRows}>
+            <div className={styles.linkRow}>
+              <div className={styles.linkRowLabel}>🎙️ Host</div>
+              <code className={styles.linkRowUrl}>http://localhost:3000/host</code>
+              <button className={`${styles.btn} ${styles.btnPurple}`} onClick={() => openLink("http://localhost:3000/host")}>
+                Open
+              </button>
+            </div>
+
+            <div className={styles.linkRow}>
+              <div className={styles.linkRowLabel}>🎮 Player</div>
+              <code className={styles.linkRowUrl}>{publicUrl ? `${publicUrl}/player` : "—"}</code>
+              <button
+                className={`${styles.btn} ${styles.btnGhost}`}
+                disabled={!publicUrl?.startsWith("http")}
+                onClick={() => copyLink(`${publicUrl}/player`, "player")}
+              >
+                {copied === "player" ? "✅ Copied" : "Copy"}
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnGreen}`}
+                disabled={!publicUrl?.startsWith("http")}
+                onClick={() => openLink(`${publicUrl}/player`)}
+              >
+                View
+              </button>
+            </div>
+
+            <div className={styles.linkRow}>
+              <div className={styles.linkRowLabel}>📺 Audience</div>
+              <code className={styles.linkRowUrl}>{publicUrl ? `${publicUrl}/audience` : "—"}</code>
+              <button
+                className={`${styles.btn} ${styles.btnGhost}`}
+                disabled={!publicUrl?.startsWith("http")}
+                onClick={() => copyLink(`${publicUrl}/audience`, "audience")}
+              >
+                {copied === "audience" ? "✅ Copied" : "Copy"}
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                disabled={!publicUrl?.startsWith("http")}
+                onClick={() => openLink(`${publicUrl}/audience`)}
+              >
+                View
+              </button>
+            </div>
           </div>
         </div>
 

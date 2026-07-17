@@ -1,6 +1,7 @@
 const { spawn, exec } = require("child_process");
 const express = require("express");
 const path = require("path");
+const util = require("util");
 
 const app = express();
 app.use(express.json());
@@ -10,12 +11,20 @@ let logs = [];
 let publicUrl = "Starting...";
 let tunnelProcess = null;
 
+const rawConsoleLog = console.log.bind(console);
+const rawConsoleError = console.error.bind(console);
+
 function addLog(msg) {
   const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  console.log(line);
+  rawConsoleLog(line);
   logs.push(line);
   if (logs.length > 300) logs.shift();
 }
+
+// Capture console output from server.js and its modules (they run in this
+// same process via require() below) so it shows up in the /monitor Logs card.
+console.log = (...args) => addLog(util.format(...args));
+console.error = (...args) => addLog(`ERROR: ${util.format(...args)}`);
 
 const exeDir = process.pkg
   ? path.dirname(process.execPath)

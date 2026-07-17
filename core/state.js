@@ -36,22 +36,23 @@ function loadSession() {
   }
 }
 
-function saveSession(data) {
+function saveSession() {
   try {
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const data = { sessionPassword, whitelist, teamMode, teams, playerTeams };
     fs.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
   } catch (err) {
     console.error("Failed to save session:", err);
   }
 }
 
-const sessionData = loadSession();
+const initialSession = loadSession();
 
-let sessionPassword = sessionData.sessionPassword || "";
-let whitelist = sessionData.whitelist || [];
-let teamMode = sessionData.teamMode || 0;
-let teams = sessionData.teams || {};
-let playerTeams = sessionData.playerTeams || {};
+let sessionPassword = initialSession.sessionPassword || "";
+let whitelist = initialSession.whitelist || [];
+let teamMode = initialSession.teamMode || 0;
+let teams = initialSession.teams || {};
+let playerTeams = initialSession.playerTeams || {};
 
 let buzzerState = "locked";
 let activationTime = null;
@@ -86,7 +87,7 @@ function initTeams(count) {
 }
 
 module.exports = {
-  sessionData, loadSession, saveSession,
+  loadSession, saveSession,
   get sessionPassword() { return sessionPassword; },
   set sessionPassword(v) { sessionPassword = v; },
   get whitelist() { return whitelist; },

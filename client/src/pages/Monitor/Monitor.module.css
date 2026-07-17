@@ -153,19 +153,39 @@
   font-family: monospace;
 }
 
-.urlActions {
+.linkRows {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.playerLink {
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 8px 10px 8px 14px;
+}
+
+.linkRowLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: 90px;
+}
+
+.linkRowUrl {
+  flex: 1;
   font-size: 12px;
-  color: #475569;
-}
-
-.playerLink code {
   color: #6366f1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 /* Status pill */
@@ -196,6 +216,8 @@
 
 .btn:hover { opacity: 0.85; }
 .btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled:hover { opacity: 0.4; }
 
 .btnPrimary { background: #6366f1; }
 .btnPurple { background: #7c3aed; }
