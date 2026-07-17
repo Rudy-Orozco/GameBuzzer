@@ -245,6 +245,60 @@
 .imagePreview { display: flex; flex-direction: column; gap: 6px; }
 .imagePreview img { width: 100%; border-radius: 6px; border: 1px solid #1e293b; max-height: 70px; object-fit: cover; }
 
+/* Jeopardy */
+.jeopardyControls { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+.jeopardyToolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.jeopardyToolbar > .screenTabs { flex: 1; }
+
+.jeopardyImportRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.jeopardyImportRow .screenBtn { flex: 0 0 auto; padding-left: 10px; padding-right: 10px; }
+.jeopardyImportStatus { font-size: 11px; color: #22c55e; font-weight: 600; }
+
+.activeClueBox {
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activeClueQuestion { font-size: 14px; font-weight: 600; color: #f1f5f9; line-height: 1.5; }
+
+.jeopardyEditor { display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
+
+.jeopardyEditCategory {
+  background: #080d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jeopardyEditClue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+  border-left: 2px solid #1e293b;
+}
+
+.jeopardyEditValue {
+  font-size: 11px;
+  font-weight: 700;
+  color: #eab308;
+  font-family: monospace;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.jeopardyEditClue .screenTextarea { flex: 2; }
+.jeopardyEditClue .screenInput { flex: 1; }
+
 /* Sidebar */
 .sidebar {
   display: flex;

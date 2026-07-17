@@ -46,6 +46,50 @@ function saveSession() {
   }
 }
 
+const jeopardyFile = path.join(dataDir, "jeopardy.json");
+
+const JEOPARDY_CATEGORY_COUNT = 5;
+const JEOPARDY_ROUND_VALUES = { 1: [200, 400, 600, 800, 1000], 2: [400, 800, 1200, 1600, 2000] };
+
+function buildJeopardyRound(round) {
+  return {
+    categories: Array.from({ length: JEOPARDY_CATEGORY_COUNT }, () => ({
+      name: "",
+      clues: JEOPARDY_ROUND_VALUES[round].map(value => ({ value, question: "", answer: "", used: false })),
+    })),
+  };
+}
+
+function defaultJeopardyBoard() {
+  return { round: 1, rounds: { 1: buildJeopardyRound(1), 2: buildJeopardyRound(2) } };
+}
+
+function loadJeopardyBoard() {
+  try {
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    if (!fs.existsSync(jeopardyFile)) {
+      const defaults = defaultJeopardyBoard();
+      fs.writeFileSync(jeopardyFile, JSON.stringify(defaults, null, 2));
+      return defaults;
+    }
+    const raw = fs.readFileSync(jeopardyFile, "utf-8").trim();
+    if (!raw) return defaultJeopardyBoard();
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error("Failed to load jeopardy board:", err);
+    return defaultJeopardyBoard();
+  }
+}
+
+function saveJeopardyBoard() {
+  try {
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(jeopardyFile, JSON.stringify(jeopardyBoard, null, 2));
+  } catch (err) {
+    console.error("Failed to save jeopardy board:", err);
+  }
+}
+
 const initialSession = loadSession();
 
 let sessionPassword = initialSession.sessionPassword || "";
@@ -64,6 +108,9 @@ let screenTab = "trivia";
 let screenContent = { type: "blank", content: "", question: "", answer: "" };
 
 let scores = {};
+
+let jeopardyBoard = loadJeopardyBoard();
+let activeClue = null;
 
 const players = new Map();
 const playerStats = new Map();
@@ -114,6 +161,14 @@ module.exports = {
   set screenContent(v) { screenContent = v; },
   get scores() { return scores; },
   set scores(v) { scores = v; },
+  get jeopardyBoard() { return jeopardyBoard; },
+  set jeopardyBoard(v) { jeopardyBoard = v; },
+  get activeClue() { return activeClue; },
+  set activeClue(v) { activeClue = v; },
+  saveJeopardyBoard,
+  defaultJeopardyBoard,
+  JEOPARDY_CATEGORY_COUNT,
+  JEOPARDY_ROUND_VALUES,
   players, playerStats, dismissedPlayers,
   initTeams,
   DEFAULT_TEAM_COLORS,

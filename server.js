@@ -7,6 +7,7 @@ const path = require("path");
 const state = require("./core/state");
 const { registerPlayerEvents } = require("./core/players");
 const { registerBuzzerEvents } = require("./core/buzzer");
+const { registerJeopardyEvents } = require("./core/jeopardy");
 const sessionRoutes = require("./routes/session");
 const teamsRoutes = require("./routes/teams");
 
@@ -53,6 +54,7 @@ app.post("/api/data", (req, res) => {
 io.on("connection", (socket) => {
   registerPlayerEvents(socket, io);
   registerBuzzerEvents(socket, io);
+  registerJeopardyEvents(socket, io);
 });
 
 // === RTT Measurement ===

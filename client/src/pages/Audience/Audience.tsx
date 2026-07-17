@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import socket from "../../socket";
+import JeopardyBoard, { type PublicJeopardyBoard } from "../../components/JeopardyBoard";
 import styles from "./Audience.module.css";
 
 type BuzzerState = "locked" | "active" | "buzzed";
@@ -18,6 +19,11 @@ interface Team {
   players: string[];
 }
 
+interface ActiveClue {
+  round: 1 | 2; catIndex: number; clueIndex: number;
+  category: string; value: number; question: string; answer: string; revealed: boolean;
+}
+
 export default function Audience() {
   const [connected, setConnected] = useState(false);
   const [buzzerState, setBuzzerState] = useState<BuzzerState>("locked");
@@ -29,12 +35,15 @@ export default function Audience() {
     teams: Record<number, Team>;
     playerTeams: Record<string, number>;
   }>({ teamMode: 0, teams: {}, playerTeams: {} });
+  const [screenTab, setScreenTab] = useState("trivia");
   const [screenContent, setScreenContent] = useState<{
     type: "blank" | "question" | "image" | "answer";
     content: string; question: string; answer: string;
   }>({ type: "blank", content: "", question: "", answer: "" });
   const [scores, setScores] = useState<Record<string, number>>({});
   const [notif, setNotif] = useState<string | null>(null);
+  const [jeopardyBoard, setJeopardyBoard] = useState<PublicJeopardyBoard | null>(null);
+  const [activeClue, setActiveClue] = useState<ActiveClue | null>(null);
 
   useEffect(() => {
     socket.on("auth_success", () => setConnected(true));
@@ -47,9 +56,15 @@ export default function Audience() {
       if (state.teamMode !== undefined) {
         setTeamsState({ teamMode: state.teamMode, teams: state.teams || {}, playerTeams: state.playerTeams || {} });
       }
+      if (state.screenTab) setScreenTab(state.screenTab);
       if (state.screenContent) setScreenContent(state.screenContent);
       if (state.scores) setScores(state.scores);
+      if (state.jeopardyBoard) setJeopardyBoard(state.jeopardyBoard);
+      if (state.activeClue !== undefined) setActiveClue(state.activeClue);
     });
+
+    socket.on("jeopardy_board_update", (board: PublicJeopardyBoard) => setJeopardyBoard(board));
+    socket.on("jeopardy_clue_update", (clue: ActiveClue | null) => setActiveClue(clue));
 
     socket.on("buzzer_state", (data) => {
       setBuzzerState(data.state);
@@ -77,6 +92,7 @@ export default function Audience() {
     });
 
     socket.on("screen_update", (data) => {
+      setScreenTab(data.tab);
       setScreenContent({ type: data.type, content: data.content, question: data.question, answer: data.answer });
     });
 
@@ -100,6 +116,7 @@ export default function Audience() {
       socket.off("buzzed"); socket.off("queue_update"); socket.off("reset");
       socket.off("players"); socket.off("teams_update"); socket.off("screen_update");
       socket.off("scores_update"); socket.off("answer_correct"); socket.off("answer_incorrect");
+      socket.off("jeopardy_board_update"); socket.off("jeopardy_clue_update");
     };
   }, []);
 
@@ -131,19 +148,33 @@ export default function Audience() {
 
           {/* Screen Display */}
           <div className={styles.screenDisplay}>
-            {screenContent.type === "blank" && <div className={styles.screenBlank}>Waiting for host...</div>}
-            {screenContent.type === "question" && <div className={styles.screenQuestion}>{screenContent.content}</div>}
-            {screenContent.type === "image" && (
-              <div className={styles.screenImageWrap}>
-                {screenContent.question && <div className={styles.screenQuestionSmall}>{screenContent.question}</div>}
-                <img src={screenContent.content} alt="question" className={styles.screenImage} />
-              </div>
-            )}
-            {screenContent.type === "answer" && (
-              <div className={styles.screenAnswerWrap}>
-                {screenContent.question && <div className={styles.screenQuestionSmall}>{screenContent.question}</div>}
-                <div className={styles.screenAnswer}>✅ {screenContent.content}</div>
-              </div>
+            {screenTab === "jeopardy" && jeopardyBoard ? (
+              activeClue ? (
+                <div className={styles.screenAnswerWrap}>
+                  <div className={styles.screenQuestionSmall}>{activeClue.category} — ${activeClue.value}</div>
+                  <div className={styles.screenQuestion}>{activeClue.question}</div>
+                  {activeClue.revealed && <div className={styles.screenAnswer}>✅ {activeClue.answer}</div>}
+                </div>
+              ) : (
+                <JeopardyBoard board={jeopardyBoard} />
+              )
+            ) : (
+              <>
+                {screenContent.type === "blank" && <div className={styles.screenBlank}>Waiting for host...</div>}
+                {screenContent.type === "question" && <div className={styles.screenQuestion}>{screenContent.content}</div>}
+                {screenContent.type === "image" && (
+                  <div className={styles.screenImageWrap}>
+                    {screenContent.question && <div className={styles.screenQuestionSmall}>{screenContent.question}</div>}
+                    <img src={screenContent.content} alt="question" className={styles.screenImage} />
+                  </div>
+                )}
+                {screenContent.type === "answer" && (
+                  <div className={styles.screenAnswerWrap}>
+                    {screenContent.question && <div className={styles.screenQuestionSmall}>{screenContent.question}</div>}
+                    <div className={styles.screenAnswer}>✅ {screenContent.content}</div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

@@ -1,4 +1,5 @@
 const state = require("./state");
+const { publicJeopardyBoard } = require("./jeopardy");
 
 function registerPlayerEvents(socket, io) {
   socket.on("auth", ({ name, password }) => {
@@ -17,6 +18,8 @@ function registerPlayerEvents(socket, io) {
         screenTab: state.screenTab,
         screenContent: state.screenContent,
         scores: state.scores,
+        jeopardyBoard: state.jeopardyBoard,
+        activeClue: state.activeClue,
       });
       console.log("Host connected");
       return;
@@ -37,6 +40,8 @@ function registerPlayerEvents(socket, io) {
         screenTab: state.screenTab,
         screenContent: state.screenContent,
         scores: state.scores,
+        jeopardyBoard: publicJeopardyBoard(state.jeopardyBoard),
+        activeClue: state.activeClue,
       });
       console.log("Audience connected");
       return;
@@ -82,6 +87,8 @@ function registerPlayerEvents(socket, io) {
       screenTab: state.screenTab,
       screenContent: state.screenContent,
       scores: state.scores,
+      jeopardyBoard: publicJeopardyBoard(state.jeopardyBoard),
+      activeClue: state.activeClue,
     });
 
     if (state.dismissedPlayers.has(name.trim())) {

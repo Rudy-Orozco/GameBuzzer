@@ -1,0 +1,55 @@
+.board {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.categoryHeader {
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+  padding: 10px 6px;
+  border-radius: 6px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.categoryEmpty { color: #475569; font-weight: 400; text-transform: none; }
+
+.cell {
+  background: #0d1424;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  color: #eab308;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: monospace;
+  padding: 18px 4px;
+  cursor: default;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.cellUsed {
+  background: #080d16;
+  color: transparent;
+}
+
+.cellEmpty {
+  color: #334155;
+  font-size: 16px;
+  cursor: not-allowed;
+}
+
+.cellClickable {
+  cursor: pointer;
+}
+.cellClickable:hover { background: #1e293b; transform: scale(1.03); }
+.cellClickable:active { transform: scale(0.97); }

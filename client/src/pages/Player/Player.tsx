@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import socket from "../../socket";
+import JeopardyBoard, { type PublicJeopardyBoard } from "../../components/JeopardyBoard";
 import styles from "./Player.module.css";
+
+interface ActiveClue {
+  round: 1 | 2; catIndex: number; clueIndex: number;
+  category: string; value: number; question: string; answer: string; revealed: boolean;
+}
 
 type GameState = "login" | "playing" | "kicked";
 
@@ -46,6 +52,8 @@ export default function Player() {
     content: string; question: string; answer: string;
   }>({ type: "blank", content: "", question: "", answer: "" });
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [jeopardyBoard, setJeopardyBoard] = useState<PublicJeopardyBoard | null>(null);
+  const [activeClue, setActiveClue] = useState<ActiveClue | null>(null);
 
   useEffect(() => {
     socket.on("auth_success", () => { setGameState("playing"); setAuthError(""); });
@@ -67,7 +75,12 @@ export default function Player() {
       if (state.screenTab) { setActivePlayerTab(state.screenTab); }
       if (state.screenContent) setScreenContent(state.screenContent);
       if (state.scores) setScores(state.scores);
+      if (state.jeopardyBoard) setJeopardyBoard(state.jeopardyBoard);
+      if (state.activeClue !== undefined) setActiveClue(state.activeClue);
     });
+
+    socket.on("jeopardy_board_update", (board: PublicJeopardyBoard) => setJeopardyBoard(board));
+    socket.on("jeopardy_clue_update", (clue: ActiveClue | null) => setActiveClue(clue));
 
     socket.on("buzzer_state", (data) => {
       if (data.state === "active" || data.state === "buzzed") {
@@ -155,6 +168,7 @@ export default function Player() {
       socket.off("screen_update"); socket.off("scores_update"); socket.off("answer_result");
       socket.off("answer_correct"); socket.off("answer_incorrect");
       socket.off("kicked"); socket.off("ping_check");
+      socket.off("jeopardy_board_update"); socket.off("jeopardy_clue_update");
     };
   }, [name]);
 
@@ -228,13 +242,19 @@ export default function Player() {
         <div className={styles.buzzerCol}>
 
           {/* Screen Display */}
-          <div className={styles.screenDisplay}>
+          <div className={`${styles.screenDisplay} ${activePlayerTab === "jeopardy" ? styles.screenDisplayWide : ""}`}>
             <div className={styles.screenTabBar}>
               <button
                 className={`${styles.screenTabBtn} ${activePlayerTab === "trivia" ? styles.screenTabActive : ""}`}
                 onClick={() => setActivePlayerTab("trivia")}
               >
                 📝 Trivia
+              </button>
+              <button
+                className={`${styles.screenTabBtn} ${activePlayerTab === "jeopardy" ? styles.screenTabActive : ""}`}
+                onClick={() => setActivePlayerTab("jeopardy")}
+              >
+                🧩 Jeopardy
               </button>
             </div>
             <div className={styles.screenContent}>
@@ -255,6 +275,17 @@ export default function Player() {
                     </div>
                   )}
                 </>
+              )}
+              {activePlayerTab === "jeopardy" && jeopardyBoard && (
+                activeClue ? (
+                  <div className={styles.screenAnswerWrap}>
+                    <div className={styles.screenQuestionSmall}>{activeClue.category} — ${activeClue.value}</div>
+                    <div className={styles.screenQuestion}>{activeClue.question}</div>
+                    {activeClue.revealed && <div className={styles.screenAnswer}>✅ {activeClue.answer}</div>}
+                  </div>
+                ) : (
+                  <JeopardyBoard board={jeopardyBoard} />
+                )
               )}
             </div>
           </div>

@@ -79,6 +79,8 @@
   border: 1px solid #1e293b; border-radius: 12px; overflow: hidden;
 }
 
+.screenDisplayWide { max-width: 100%; }
+
 .screenTabBar { display: flex; gap: 6px; padding: 8px 12px; background: #080d16; border-bottom: 1px solid #1e293b; }
 .screenTabBtn { padding: 4px 12px; background: transparent; border: 1px solid #1e293b; border-radius: 6px; color: #64748b; font-size: 12px; cursor: pointer; transition: all 0.15s; }
 .screenTabActive { background: #6366f1; border-color: #6366f1; color: white; }

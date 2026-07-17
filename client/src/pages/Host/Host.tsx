@@ -1,11 +1,32 @@
 import { useEffect, useState, useRef } from "react";
 import socket from "../../socket";
+import JeopardyBoard, { type PublicJeopardyBoard } from "../../components/JeopardyBoard";
+import { parseCSV, resolveJeopardyImport, buildJeopardyTemplateCSV } from "../../utils/jeopardyCsv";
 import styles from "./Host.module.css";
 
 interface PlayerStat { name: string; rtt: number; }
 interface Team { id: number; name: string; color: string; players: string[]; }
 interface TeamsState { teamMode: number; teams: Record<number, Team>; playerTeams: Record<string, number>; }
 interface QueueEntry { name: string; teamName: string | null; teamColor: string | null; reactionTime: number; }
+
+interface FullClue { value: number; question: string; answer: string; used: boolean; }
+interface FullCategory { name: string; clues: FullClue[]; }
+interface FullRound { categories: FullCategory[]; }
+interface FullJeopardyBoard { round: 1 | 2; rounds: Record<number, FullRound>; }
+interface ActiveClue {
+  round: 1 | 2; catIndex: number; clueIndex: number;
+  category: string; value: number; question: string; answer: string; revealed: boolean;
+}
+
+function toPublicBoard(board: FullJeopardyBoard): PublicJeopardyBoard {
+  return {
+    round: board.round,
+    rounds: {
+      1: { categories: board.rounds[1].categories.map(c => ({ name: c.name, clues: c.clues.map(cl => ({ value: cl.value, used: cl.used, filled: !!cl.question.trim() })) })) },
+      2: { categories: board.rounds[2].categories.map(c => ({ name: c.name, clues: c.clues.map(cl => ({ value: cl.value, used: cl.used, filled: !!cl.question.trim() })) })) },
+    },
+  };
+}
 
 export default function Host() {
   const [winner, setWinner] = useState<string | null>(null);
@@ -27,6 +48,11 @@ export default function Host() {
   const [deductOnIncorrect, setDeductOnIncorrect] = useState(true);
   const [editingScore, setEditingScore] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [jeopardyBoard, setJeopardyBoard] = useState<FullJeopardyBoard | null>(null);
+  const [activeClue, setActiveClue] = useState<ActiveClue | null>(null);
+  const [jeopardyEditMode, setJeopardyEditMode] = useState(false);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const local = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
@@ -46,6 +72,8 @@ export default function Host() {
       if (state.screenTab) setScreenTab(state.screenTab);
       if (state.screenContent) setScreenMode(state.screenContent.type);
       if (state.scores) setScores(state.scores);
+      if (state.jeopardyBoard) setJeopardyBoard(state.jeopardyBoard);
+      if (state.activeClue !== undefined) setActiveClue(state.activeClue);
       if (state.teamMode !== undefined) {
         setTeamsState({ teamMode: state.teamMode, teams: state.teams || {}, playerTeams: state.playerTeams || {} });
       }
@@ -103,12 +131,37 @@ export default function Host() {
       setTimeout(() => setHostNotif(null), 3000);
     });
 
+    socket.on("jeopardy_board_update", (pub: PublicJeopardyBoard) => {
+      setJeopardyBoard(prev => {
+        if (!prev) return prev;
+        const rounds = { ...prev.rounds };
+        for (const r of [1, 2] as const) {
+          rounds[r] = {
+            categories: pub.rounds[r].categories.map((pubCat, ci) => ({
+              name: pubCat.name,
+              clues: pubCat.clues.map((pubClue, qi) => ({
+                ...prev.rounds[r].categories[ci].clues[qi],
+                used: pubClue.used,
+              })),
+            })),
+          };
+        }
+        return { round: pub.round, rounds };
+      });
+    });
+    socket.on("jeopardy_clue_update", (clue: ActiveClue | null) => setActiveClue(clue));
+    socket.on("jeopardy_import_done", ({ categoryCount, clueCount }: { categoryCount: number; clueCount: number }) => {
+      setImportStatus(`✅ Imported ${categoryCount} categories, ${clueCount} clues`);
+      setTimeout(() => setImportStatus(null), 4000);
+    });
+
     return () => {
       socket.off("state"); socket.off("buzzer_processing"); socket.off("buzzed");
       socket.off("queue_update"); socket.off("buzzer_state"); socket.off("reset");
       socket.off("players"); socket.off("player_stats"); socket.off("teams_update");
       socket.off("screen_update"); socket.off("scores_update");
       socket.off("answer_correct"); socket.off("answer_incorrect");
+      socket.off("jeopardy_board_update"); socket.off("jeopardy_clue_update"); socket.off("jeopardy_import_done");
     };
   }, [isLocal]);
 
@@ -160,6 +213,93 @@ export default function Host() {
     const reader = new FileReader();
     reader.onload = () => setTriviaImage(reader.result as string);
     reader.readAsDataURL(file);
+  }
+
+  function saveJeopardyCategory(round: 1 | 2, catIndex: number, name: string) {
+    socket.emit("jeopardy_save_category", { round, catIndex, name });
+    setJeopardyBoard(prev => {
+      if (!prev) return prev;
+      const rounds = { ...prev.rounds };
+      const categories = [...rounds[round].categories];
+      categories[catIndex] = { ...categories[catIndex], name };
+      rounds[round] = { categories };
+      return { ...prev, rounds };
+    });
+  }
+
+  function saveJeopardyClue(round: 1 | 2, catIndex: number, clueIndex: number, question: string, answer: string) {
+    socket.emit("jeopardy_save_clue", { round, catIndex, clueIndex, question, answer });
+    setJeopardyBoard(prev => {
+      if (!prev) return prev;
+      const rounds = { ...prev.rounds };
+      const categories = [...rounds[round].categories];
+      const clues = [...categories[catIndex].clues];
+      clues[clueIndex] = { ...clues[clueIndex], question, answer };
+      categories[catIndex] = { ...categories[catIndex], clues };
+      rounds[round] = { categories };
+      return { ...prev, rounds };
+    });
+  }
+
+  function selectJeopardyClue(catIndex: number, clueIndex: number, value: number) {
+    socket.emit("jeopardy_select_clue", { catIndex, clueIndex });
+    setPointInput(String(value));
+  }
+
+  function downloadJeopardyTemplate() {
+    const blob = new Blob([buildJeopardyTemplateCSV()], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "jeopardy_template.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = parseCSV(reader.result as string);
+      const { categories, clues, skipped } = resolveJeopardyImport(rows);
+
+      if (categories.length === 0 && clues.length === 0) {
+        alert("No valid rows found. Expected columns: round,category,value,question,answer");
+        return;
+      }
+      const skippedNote = skipped ? ` (${skipped} row${skipped === 1 ? "" : "s"} skipped — over 5 categories/clues per round, or missing fields)` : "";
+      if (!confirm(`Import ${categories.length} categories and ${clues.length} clues?${skippedNote}\n\nThis overwrites any matching cells already on the board.`)) return;
+
+      socket.emit("jeopardy_import", { categories, clues });
+
+      setJeopardyBoard(prev => {
+        if (!prev) return prev;
+        const rounds = { ...prev.rounds };
+        for (const r of [1, 2] as const) {
+          rounds[r] = { categories: rounds[r].categories.map(c => ({ ...c, clues: c.clues.map(cl => ({ ...cl })) })) };
+        }
+        for (const cat of categories) {
+          rounds[cat.round].categories[cat.catIndex] = { ...rounds[cat.round].categories[cat.catIndex], name: cat.name };
+        }
+        for (const clue of clues) {
+          const target = rounds[clue.round].categories[clue.catIndex];
+          const nextClues = [...target.clues];
+          nextClues[clue.clueIndex] = { ...nextClues[clue.clueIndex], question: clue.question, answer: clue.answer };
+          rounds[clue.round].categories[clue.catIndex] = { ...target, clues: nextClues };
+        }
+        return { ...prev, rounds };
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  function revealJeopardyAnswer() { socket.emit("jeopardy_reveal_answer"); }
+  function closeJeopardyClue() { socket.emit("jeopardy_close_clue"); }
+  function setJeopardyRound(round: 1 | 2) { socket.emit("jeopardy_set_round", { round }); }
+  function resetJeopardyProgress() {
+    if (confirm("Reset all board progress? This unmarks every clue as unused and returns to Round 1.")) {
+      socket.emit("jeopardy_reset_progress");
+    }
   }
 
   function getRttColor(rtt: number) {
@@ -216,23 +356,38 @@ export default function Host() {
             <div className={styles.screenPreviewHeader}>
               <span className={styles.sectionLabel}>Screen</span>
               <span className={`${styles.badge} ${screenMode !== "blank" ? styles.badgeLive : ""}`}>
-                {screenMode === "blank" ? "Off" : screenMode}
+                {screenTab === "jeopardy" ? (activeClue ? "clue" : "board") : (screenMode === "blank" ? "Off" : screenMode)}
               </span>
             </div>
             <div className={styles.screenPreviewContent}>
-              {screenMode === "blank" && <div className={styles.previewBlank}>Screen is blank for players</div>}
-              {screenMode === "question" && <div className={styles.previewQuestion}>{triviaText}</div>}
-              {screenMode === "image" && triviaImage && (
-                <div className={styles.previewImageWrap}>
-                  {triviaText && <div className={styles.previewQuestionSmall}>{triviaText}</div>}
-                  <img src={triviaImage} alt="preview" className={styles.previewImage} />
-                </div>
+              {screenTab === "trivia" && (
+                <>
+                  {screenMode === "blank" && <div className={styles.previewBlank}>Screen is blank for players</div>}
+                  {screenMode === "question" && <div className={styles.previewQuestion}>{triviaText}</div>}
+                  {screenMode === "image" && triviaImage && (
+                    <div className={styles.previewImageWrap}>
+                      {triviaText && <div className={styles.previewQuestionSmall}>{triviaText}</div>}
+                      <img src={triviaImage} alt="preview" className={styles.previewImage} />
+                    </div>
+                  )}
+                  {screenMode === "answer" && (
+                    <div className={styles.previewAnswerWrap}>
+                      {triviaText && <div className={styles.previewQuestionSmall}>{triviaText}</div>}
+                      <div className={styles.previewAnswer}>✅ {triviaAnswer}</div>
+                    </div>
+                  )}
+                </>
               )}
-              {screenMode === "answer" && (
-                <div className={styles.previewAnswerWrap}>
-                  {triviaText && <div className={styles.previewQuestionSmall}>{triviaText}</div>}
-                  <div className={styles.previewAnswer}>✅ {triviaAnswer}</div>
-                </div>
+              {screenTab === "jeopardy" && jeopardyBoard && (
+                activeClue ? (
+                  <div className={styles.previewAnswerWrap}>
+                    <div className={styles.previewQuestionSmall}>{activeClue.category} — ${activeClue.value}</div>
+                    <div className={styles.previewQuestion}>{activeClue.question}</div>
+                    {activeClue.revealed && <div className={styles.previewAnswer}>✅ {activeClue.answer}</div>}
+                  </div>
+                ) : (
+                  <JeopardyBoard board={toPublicBoard(jeopardyBoard)} />
+                )
               )}
             </div>
           </div>
@@ -420,6 +575,12 @@ export default function Host() {
                 >
                   📝 Trivia
                 </button>
+                <button
+                  className={`${styles.screenTabBtn} ${screenTab === "jeopardy" ? styles.screenTabActive : ""}`}
+                  onClick={() => { setScreenTab("jeopardy"); socket.emit("screen_tab", "jeopardy"); }}
+                >
+                  🧩 Jeopardy
+                </button>
               </div>
               {screenTab === "trivia" && (
                 <div className={styles.screenControls}>
@@ -450,6 +611,104 @@ export default function Host() {
                       <img src={triviaImage} alt="preview" />
                       <button className={`${styles.screenBtn} ${styles.screenBtnPurple}`} onClick={pushImage}>Push Image</button>
                     </div>
+                  )}
+                </div>
+              )}
+              {screenTab === "jeopardy" && jeopardyBoard && (
+                <div className={styles.jeopardyControls}>
+                  <div className={styles.jeopardyToolbar}>
+                    <div className={styles.screenTabs} style={{ padding: 0, border: "none" }}>
+                      <button
+                        className={`${styles.screenTabBtn} ${jeopardyBoard.round === 1 ? styles.screenTabActive : ""}`}
+                        onClick={() => setJeopardyRound(1)}
+                        disabled={!!activeClue}
+                      >
+                        Round 1
+                      </button>
+                      <button
+                        className={`${styles.screenTabBtn} ${jeopardyBoard.round === 2 ? styles.screenTabActive : ""}`}
+                        onClick={() => setJeopardyRound(2)}
+                        disabled={!!activeClue}
+                      >
+                        Double Jeopardy
+                      </button>
+                    </div>
+                    <button className={`${styles.screenBtn} ${styles.screenBtnPurple}`} onClick={() => setJeopardyEditMode(e => !e)}>
+                      {jeopardyEditMode ? "▶️ Play" : "✏️ Edit"}
+                    </button>
+                    <button className={`${styles.screenBtn} ${styles.screenBtnRed}`} onClick={resetJeopardyProgress}>
+                      🔄 Reset
+                    </button>
+                  </div>
+
+                  {jeopardyEditMode && !activeClue && (
+                    <div className={styles.jeopardyImportRow}>
+                      <button className={`${styles.screenBtn} ${styles.screenBtnBlue}`} onClick={downloadJeopardyTemplate}>
+                        ⬇️ Template CSV
+                      </button>
+                      <label className={`${styles.screenBtn} ${styles.screenBtnGreen}`}>
+                        📂 Import CSV
+                        <input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={handleCsvImport} style={{ display: "none" }} />
+                      </label>
+                      {importStatus && <span className={styles.jeopardyImportStatus}>{importStatus}</span>}
+                    </div>
+                  )}
+
+                  {activeClue ? (
+                    <div className={styles.activeClueBox}>
+                      <div className={styles.previewQuestionSmall}>{activeClue.category} — ${activeClue.value}</div>
+                      <div className={styles.activeClueQuestion}>{activeClue.question}</div>
+                      {activeClue.revealed && <div className={styles.previewAnswer}>✅ {activeClue.answer}</div>}
+                      <div className={styles.screenBtnRow}>
+                        {!activeClue.revealed && (
+                          <button className={`${styles.screenBtn} ${styles.screenBtnGreen}`} onClick={revealJeopardyAnswer}>
+                            ✅ Reveal
+                          </button>
+                        )}
+                        <button className={`${styles.screenBtn} ${styles.screenBtnRed}`} onClick={closeJeopardyClue}>
+                          ⏹ Close Clue
+                        </button>
+                      </div>
+                    </div>
+                  ) : jeopardyEditMode ? (
+                    <div className={styles.jeopardyEditor}>
+                      {jeopardyBoard.rounds[jeopardyBoard.round].categories.map((cat, catIndex) => (
+                        <div key={`${jeopardyBoard.round}-cat-${catIndex}`} className={styles.jeopardyEditCategory}>
+                          <input
+                            className={styles.screenInput}
+                            defaultValue={cat.name}
+                            placeholder={`Category ${catIndex + 1}`}
+                            maxLength={40}
+                            onBlur={e => saveJeopardyCategory(jeopardyBoard.round, catIndex, e.target.value)}
+                          />
+                          {cat.clues.map((clue, clueIndex) => (
+                            <div key={`${jeopardyBoard.round}-${catIndex}-${clueIndex}`} className={styles.jeopardyEditClue}>
+                              <div className={styles.jeopardyEditValue}>${clue.value}</div>
+                              <textarea
+                                className={styles.screenTextarea}
+                                defaultValue={clue.question}
+                                placeholder="Question..."
+                                rows={2}
+                                onBlur={e => saveJeopardyClue(jeopardyBoard.round, catIndex, clueIndex, e.target.value, clue.answer)}
+                              />
+                              <input
+                                className={styles.screenInput}
+                                defaultValue={clue.answer}
+                                placeholder="Answer..."
+                                onBlur={e => saveJeopardyClue(jeopardyBoard.round, catIndex, clueIndex, clue.question, e.target.value)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <JeopardyBoard
+                      board={toPublicBoard(jeopardyBoard)}
+                      onSelectClue={(catIndex, clueIndex) =>
+                        selectJeopardyClue(catIndex, clueIndex, jeopardyBoard.rounds[jeopardyBoard.round].categories[catIndex].clues[clueIndex].value)
+                      }
+                    />
                   )}
                 </div>
               )}
