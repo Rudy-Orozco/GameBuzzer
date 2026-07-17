@@ -15,10 +15,7 @@ router.post("/teams/mode", (req, res) => {
   state.teamMode = mode;
   if (mode === 0) { state.teams = {}; state.playerTeams = {}; }
   else state.initTeams(mode);
-  state.sessionData.teamMode = state.teamMode;
-  state.sessionData.teams = state.teams;
-  state.sessionData.playerTeams = state.playerTeams;
-  state.saveSession(state.sessionData);
+  state.saveSession();
   req.io.emit("teams_update", {
     teamMode: state.teamMode,
     teams: state.teams,
@@ -31,8 +28,7 @@ router.post("/teams/rename", (req, res) => {
   const { teamId, name } = req.body;
   if (!state.teams[teamId]) return res.status(400).json({ error: "Team not found" });
   state.teams[teamId].name = name;
-  state.sessionData.teams = state.teams;
-  state.saveSession(state.sessionData);
+  state.saveSession();
   req.io.emit("teams_update", {
     teamMode: state.teamMode,
     teams: state.teams,
@@ -57,9 +53,7 @@ router.post("/teams/assign", (req, res) => {
       state.teams[teamId].players.push(playerName);
     }
   }
-  state.sessionData.playerTeams = state.playerTeams;
-  state.sessionData.teams = state.teams;
-  state.saveSession(state.sessionData);
+  state.saveSession();
   req.io.emit("teams_update", {
     teamMode: state.teamMode,
     teams: state.teams,

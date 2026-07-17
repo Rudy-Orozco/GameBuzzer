@@ -22,6 +22,26 @@ function registerPlayerEvents(socket, io) {
       return;
     }
 
+    if (name === "__audience__") {
+      socket.data.name = "__audience__";
+      socket.data.authed = true;
+      socket.emit("auth_success");
+      socket.emit("state", {
+        buzzerState: state.buzzerState,
+        winner: state.winner,
+        queue: state.buzzQueue,
+        players: [...state.players.values()],
+        teamMode: state.teamMode,
+        teams: state.teams,
+        playerTeams: state.playerTeams,
+        screenTab: state.screenTab,
+        screenContent: state.screenContent,
+        scores: state.scores,
+      });
+      console.log("Audience connected");
+      return;
+    }
+
     if (!name?.trim()) return socket.emit("auth_failed", { reason: "Please enter a name." });
     if (state.sessionPassword && password !== state.sessionPassword) {
       return socket.emit("auth_failed", { reason: "Incorrect password." });
